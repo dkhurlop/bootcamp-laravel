@@ -13,7 +13,11 @@ class TweetController extends Controller
      */
     public function index()
     {
-        return view('tweets.index');
+        
+        return view('tweets.index',[
+            'tweets' => Tweet::with('user')->latest()->get()
+        ]);
+
     }
 
     /**
@@ -29,13 +33,11 @@ class TweetController extends Controller
      */
     public function store(Request $request)
     {
-    $request->validate([
-        'message' => 'required|max:255',
+    $validated = $request->validate([
+        'message' => ['required', 'min:3', 'max:255'],
     ]);
 
-    auth()->user()->tweets()->create([
-            'message' => $request->get('message'),
-    ]);
+    auth()->user()->tweets()->create($validated);
 
         return to_route('tweets.index')->with('success', __('Tweet Created Successfully'));
 
@@ -54,7 +56,13 @@ class TweetController extends Controller
      */
     public function edit(Tweet $tweet)
     {
-        //
+        if (auth()->user()->isNot($tweet->user)) {
+           abort(403);
+        }
+        
+        return view('tweets.edit',[
+        'tweet'=> $tweet,
+        ]);
     }
 
     /**
@@ -62,7 +70,13 @@ class TweetController extends Controller
      */
     public function update(Request $request, Tweet $tweet)
     {
-        //
+        $validated = $request->validate([
+            'message' => ['required', 'min:3', 'max:255'],
+        ]);
+    
+        $tweet->update($validated);
+        return to_route('tweets.index')
+        ->with('success', __('Tweet update Successfully'));
     }
 
     /**
@@ -70,6 +84,8 @@ class TweetController extends Controller
      */
     public function destroy(Tweet $tweet)
     {
-        //
+
+        $tweet->delete();
+        return to_route('tweets.index')->with('success', __('Tweet Deleted Successfully'));
     }
 }
